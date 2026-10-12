@@ -131,6 +131,18 @@ section { padding: 96px 0; border-top: 1px solid #161927; }
 .final h2 { margin-bottom: 30px; }
 .final .fine { margin-top: 14px; }
 
+.lb { list-style: none; padding: 0; margin: 0; border: 1px solid var(--rim); border-radius: 14px; background: var(--deck); overflow: hidden; }
+.lb li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 18px; border-top: 1px solid #191C2A; }
+.lb li:first-child { border-top: 0; }
+.lb .rk { font: 700 17px var(--display); color: var(--muted); }
+.lb li:nth-child(1) .rk { color: #F5C451; }
+.lb li:nth-child(2) .rk { color: #C9D1E4; }
+.lb li:nth-child(3) .rk { color: #D99060; }
+.lb .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.lb .cps { font: 700 19px var(--display); color: var(--cyan); }
+.lb .cps small { font: 400 13px var(--body); color: var(--muted); margin-left: 4px; }
+.lb .msg { display: block; padding: 22px 18px; color: var(--muted); }
+
 footer { border-top: 1px solid #161927; padding: 40px 0 56px; font-size: 14px; color: var(--muted); }
 footer .wrap { display: grid; gap: 10px; }
 footer p { max-width: 70em; }
@@ -163,6 +175,7 @@ footer p { max-width: 70em; }
     <a class="brand" href="#"><span class="tile"><span>0</span></span>ZeroClick</a>
     <nav>
       <a class="hide-s" href="#overlay">Overlay</a>
+      <a class="hide-s" href="#leaderboard">Leaderboard</a>
       <a class="hide-s" href="#faq">FAQ</a>
       <a href="https://github.com/vzc1/ZeroClick">GitHub</a>
       <a class="btn small" href="https://github.com/vzc1/ZeroClick/releases/latest/download/ZeroClickSetup.exe">Download</a>
@@ -248,6 +261,20 @@ footer p { max-width: 70em; }
       </ol>
     </div>
     <img class="shot" src="img/app-stream.webp" width="934" height="338" loading="lazy" alt="ZeroClick's Streamer mode card: OBS is connected, with copyable links for keyboard and mouse, keyboard only, and mouse only, each with its size.">
+  </div>
+</section>
+
+<section id="leaderboard">
+  <div class="wrap split">
+    <div class="copy">
+      <h2>How fast can you click?</h2>
+      <p>ZeroClick has a 10-second click test. Turn on the leaderboard in the app, pick a nickname, and your best score shows up here.</p>
+      <ul class="feats">
+        <li><b>Only your nickname and best score</b> are shared, and only if you turn it on.</li>
+        <li><b>Autoclickers don't count.</b> Scores over 25 clicks per second or with machine-perfect timing are thrown out.</li>
+      </ul>
+    </div>
+    <ol class="lb" id="lb" aria-live="polite"><li><span class="msg">Loading the leaderboard...</span></li></ol>
   </div>
 </section>
 
@@ -411,6 +438,30 @@ for (const b of document.querySelectorAll(".packs button")) {
 fetch("https://api.github.com/repos/vzc1/ZeroClick/releases/latest").then(r => r.ok ? r.json() : null).then(j => {
   if (j && j.tag_name) for (const v of document.querySelectorAll(".ver")) v.textContent = j.tag_name.replace(/^v/, "");
 }).catch(() => {});
+
+// Leaderboard (public, read-only list)
+(function () {
+  const LB_URL = "https://crzzmsrakfhoeihgjdns.supabase.co";
+  const LB_KEY = "sb_publishable_fdB_IFbVd3IKLnGKzX2bsg_xdnugOfx";
+  const box = document.getElementById("lb");
+  const msg = (t) => { box.innerHTML = ""; const li = document.createElement("li"); const s = document.createElement("span"); s.className = "msg"; s.textContent = t; li.appendChild(s); box.appendChild(li); };
+  if (!LB_URL || !LB_KEY) { msg("The leaderboard opens soon."); return; }
+  fetch(LB_URL + "/rest/v1/top_scores?select=name,cps&limit=10", { headers: { apikey: LB_KEY, Authorization: "Bearer " + LB_KEY } })
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((rows) => {
+      if (!rows.length) { msg("No scores yet. Be the first!"); return; }
+      box.innerHTML = "";
+      rows.forEach((r, i) => {
+        const li = document.createElement("li");
+        const rk = document.createElement("span"); rk.className = "rk"; rk.textContent = "#" + (i + 1);
+        const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = r.name;
+        const cps = document.createElement("span"); cps.className = "cps"; cps.textContent = Number(r.cps).toFixed(1);
+        const u = document.createElement("small"); u.textContent = "CPS"; cps.appendChild(u);
+        li.append(rk, nm, cps); box.appendChild(li);
+      });
+    })
+    .catch(() => msg("Couldn't load the leaderboard right now."));
+})();
 </script>
 </body>
 </html>
