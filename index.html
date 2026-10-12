@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZeroClick: keyboard and mouse sounds with zero delay</title>
+<meta name="description" content="ZeroClick plays real mechanical keyboard and mouse sounds the instant you press, and shows your keys on screen while you play. Free for Windows.">
+<meta property="og:title" content="ZeroClick">
+<meta property="og:description" content="Real mechanical keyboard and mouse sounds with zero delay, plus a 3D input overlay for games and streams. Free for Windows.">
+<meta property="og:image" content="https://vzc1.github.io/ZeroClick/img/overlay.png">
+<meta name="theme-color" content="#090A0F">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preload" href="fonts/chakra-petch-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/rubik-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Chakra Petch and Rubik (SIL Open Font License), served with the site */
+@font-face { font-family: "Chakra Petch"; font-weight: 500; font-display: swap; src: url(fonts/chakra-petch-latin-500-normal.woff2) format("woff2"); }
+@font-face { font-family: "Chakra Petch"; font-weight: 600; font-display: swap; src: url(fonts/chakra-petch-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "Chakra Petch"; font-weight: 700; font-display: swap; src: url(fonts/chakra-petch-latin-700-normal.woff2) format("woff2"); }
+@font-face { font-family: "Rubik"; font-weight: 400; font-display: swap; src: url(fonts/rubik-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Rubik"; font-weight: 500; font-display: swap; src: url(fonts/rubik-latin-500-normal.woff2) format("woff2"); }
+:root {
+  --night: #090A0F;   /* page */
+  --deck: #10121B;    /* raised surfaces */
+  --rim: #22263A;     /* lines, outlines */
+  --text: #E8EAF3;
+  --muted: #8E95AF;
+  --violet: #7C5CFF;
+  --cyan: #22D3EE;
+  --display: "Chakra Petch", system-ui, sans-serif;
+  --body: "Rubik", system-ui, sans-serif;
+  --wrap: 1120px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--night); color: var(--text); font: 400 17px/1.6 var(--body); }
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--cyan); text-underline-offset: 3px; }
+a:hover { color: #7BE6F6; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 6px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.1; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: clamp(30px, 4vw, 44px); }
+h3 { font-size: 20px; font-weight: 600; }
+p { margin: 0; }
+.wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+
+/* ---- header ---- */
+.top { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+.brand { display: flex; align-items: center; gap: 12px; color: var(--text); text-decoration: none; font: 700 22px var(--display); }
+.brand:hover { color: var(--text); }
+.tile { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, var(--violet), var(--cyan)); display: grid; place-items: center; }
+.tile span { width: 26px; height: 26px; border-radius: 7px; background: #0C0D14; display: grid; place-items: center; color: var(--cyan); font: 700 17px var(--display); }
+.top nav { display: flex; gap: 22px; align-items: center; font-size: 15px; }
+.top nav a { color: var(--muted); text-decoration: none; }
+.top nav a:hover { color: var(--text); }
+.top nav a.btn, .top nav a.btn:hover { color: #fff; }
+
+/* ---- buttons ---- */
+.btn { display: inline-flex; align-items: center; gap: 12px; padding: 16px 26px; border-radius: 12px; font: 600 18px var(--display); color: #fff; text-decoration: none;
+  background: linear-gradient(90deg, var(--violet), var(--cyan)); box-shadow: 0 4px 0 #3B2C8F; transition: transform .06s, box-shadow .06s; }
+.btn:hover { color: #fff; filter: brightness(1.08); }
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #3B2C8F; }
+.btn svg { width: 20px; height: 20px; }
+.btn.small { padding: 9px 16px; font-size: 15px; border-radius: 10px; box-shadow: 0 3px 0 #3B2C8F; }
+
+/* ---- hero ---- */
+.hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: center; padding: 56px 0 96px; }
+.hero h1 { font-size: clamp(42px, 5.6vw, 68px); }
+.hero .lead { margin-top: 22px; font-size: 19px; color: #C3C8DB; max-width: 32em; }
+.hero .get { margin-top: 34px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.fine { font-size: 14px; color: var(--muted); }
+
+/* the playable keyboard */
+.board { background: #0C0E15; border-radius: 18px; padding: 14px; box-shadow: 0 7px 0 #05060A, 0 40px 80px -20px rgba(0,0,0,.7); }
+.rows { display: grid; grid-template-columns: repeat(60, 1fr); gap: 6px 0; }
+.key { --face: #262A3C; --edge: #151823; position: relative; margin: 0 3px; height: clamp(26px, 3.6vw, 44px); border-radius: 7px;
+  background: linear-gradient(var(--face), color-mix(in srgb, var(--face) 88%, #000));
+  box-shadow: 0 4px 0 var(--edge), 0 6px 8px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+  color: #E3E6F1; font: 600 clamp(9px, 1vw, 13px) var(--display); display: grid; place-items: center; user-select: none; cursor: pointer;
+  transition: transform 40ms, box-shadow 40ms, background-color 120ms; touch-action: manipulation; }
+.key.mod { --face: #1C1F2D; --edge: #101219; color: #AEB4CC; }
+.key.acc { --face: #7C5CFF; --edge: #4A33B8; color: #fff; }
+.key.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--edge), 0 2px 3px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+  --face: #5B45C9; color: #fff; }
+.key.acc.down { --face: #9A82FF; }
+.packs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; align-items: center; }
+.packs button { font: 500 15px var(--body); color: var(--muted); background: var(--deck); border: 1px solid var(--rim); border-radius: 9px; padding: 8px 14px; cursor: pointer; }
+.packs button:hover { color: var(--text); }
+.packs button[aria-pressed="true"] { color: #fff; border-color: var(--violet); background: #1A1631; }
+.demo-note { margin-top: 12px; font-size: 14px; color: var(--muted); }
+
+/* ---- sections ---- */
+section { padding: 96px 0; border-top: 1px solid #161927; }
+.split { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); gap: 56px; align-items: start; }
+.split.flip { grid-template-columns: minmax(0, 6fr) minmax(0, 4fr); }
+.copy p { margin-top: 18px; color: #C3C8DB; max-width: 34em; }
+.shot { border-radius: 14px; border: 1px solid var(--rim); overflow: hidden; box-shadow: 0 30px 60px -25px rgba(0,0,0,.8); }
+
+.names { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; list-style: none; padding: 0; }
+.names li { font-size: 14px; padding: 5px 11px; border-radius: 8px; background: var(--deck); border: 1px solid var(--rim); color: #C3C8DB; }
+.names li.mouse { border-color: #1F3A44; color: #A6E3EF; }
+
+.feats { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 14px; }
+.feats li { padding-left: 22px; position: relative; color: #C3C8DB; }
+.feats li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 9px; height: 9px; border-radius: 3px; background: var(--violet); box-shadow: 0 2px 0 #4A33B8; }
+.feats b { color: var(--text); font-weight: 500; }
+.ways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+.ways figure { margin: 0; }
+.ways figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
+.steps { list-style: none; padding: 0; margin: 30px 0 0; counter-reset: s; display: grid; gap: 22px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start; color: #C3C8DB; }
+.steps li::before { content: counter(s); width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; font: 700 20px var(--display);
+  color: #fff; background: #262A3C; box-shadow: 0 4px 0 #151823; }
+.steps b { color: var(--text); font-weight: 500; display: block; }
+.url { font: 500 15px var(--body); background: var(--deck); border: 1px solid var(--rim); padding: 2px 8px; border-radius: 6px; color: var(--cyan); white-space: nowrap; }
+
+.fast { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; margin-top: 40px; }
+.fast h3 { margin-bottom: 10px; }
+.fast p { color: #C3C8DB; font-size: 16px; }
+
+.faq { margin-top: 30px; max-width: 760px; }
+.faq details { border-bottom: 1px solid var(--rim); }
+.faq summary { cursor: pointer; padding: 20px 0; font: 600 19px var(--display); list-style: none; display: flex; justify-content: space-between; gap: 20px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; color: var(--violet); font-size: 24px; line-height: 1; transition: transform .15s; }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq details p { padding: 0 0 22px; color: #C3C8DB; max-width: 40em; }
+
+.final { text-align: center; }
+.final h2 { margin-bottom: 30px; }
+.final .fine { margin-top: 14px; }
+
+footer { border-top: 1px solid #161927; padding: 40px 0 56px; font-size: 14px; color: var(--muted); }
+footer .wrap { display: grid; gap: 10px; }
+footer p { max-width: 70em; }
+
+@media (max-width: 900px) {
+  .hero, .split, .split.flip { grid-template-columns: 1fr; gap: 40px; }
+  .split.flip .copy { order: -1; }
+  .hero { padding-top: 24px; padding-bottom: 72px; }
+  section { padding: 72px 0; }
+  .fast { grid-template-columns: 1fr; gap: 28px; }
+}
+@media (max-width: 560px) {
+  .wrap { padding: 0 16px; }
+  .top nav .hide-s { display: none; }
+  .board { padding: 8px; border-radius: 12px; }
+  .rows { gap: 4px 0; }
+  .key { margin: 0 1.5px; border-radius: 4px; box-shadow: 0 2px 0 var(--edge), inset 0 1px 0 rgba(255,255,255,.08); }
+  .key.down { transform: translateY(2px); box-shadow: 0 0 0 var(--edge); }
+  .ways { grid-template-columns: 1fr 1fr; }
+  .btn { width: 100%; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .key, .btn, .faq summary::after { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#"><span class="tile"><span>0</span></span>ZeroClick</a>
+    <nav>
+      <a class="hide-s" href="#overlay">Overlay</a>
+      <a class="hide-s" href="#faq">FAQ</a>
+      <a href="https://github.com/vzc1/ZeroClick">GitHub</a>
+      <a class="btn small" href="https://github.com/vzc1/ZeroClick/releases/latest/download/ZeroClickSetup.exe">Download</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <h1>Hear every keypress the moment you press it.</h1>
+        <p class="lead">ZeroClick plays real mechanical keyboard and mouse sounds with no delay, and shows your keys on screen while you play. Built for Fortnite and every other game.</p>
+        <div class="get">
+          <a class="btn" href="https://github.com/vzc1/ZeroClick/releases/latest/download/ZeroClickSetup.exe">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-5-5m5 5 5-5M5 20h14"/></svg>
+            Download for Windows
+          </a>
+          <p class="fine">Free. Windows 10 and 11. Version <span class="ver">2.5.0</span>.<br>
+            No installer wanted? <a href="https://github.com/vzc1/ZeroClick/releases/latest/download/ZeroClick.exe">Get the standalone .exe</a>.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="board" id="board" aria-label="Playable keyboard demo">
+          <div class="rows" id="rows"></div>
+        </div>
+        <div class="packs" role="group" aria-label="Sound pack">
+          <button type="button" data-pack="panda" aria-pressed="true">Holy Panda</button>
+          <button type="button" data-pack="blue" aria-pressed="false">Cherry MX Blue</button>
+          <button type="button" data-pack="modelm" aria-pressed="false">IBM Model M</button>
+        </div>
+        <p class="demo-note">Type anything, or tap the keys. These are real recordings from ZeroClick's sound packs. Your browser adds its own delay here; the app is much faster.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<section id="sounds">
+  <div class="wrap split">
+    <div class="copy">
+      <h2>38 keyboards and 19 mice, all real recordings.</h2>
+      <p>Thocky linears, crisp clickies, an IBM Model M with every key sampled, and the mice people actually game with. Click a pack to switch, or drop in any Mechvibes pack you already have.</p>
+      <ul class="names" aria-label="Some of the sound packs">
+        <li>Holy Panda</li><li>Cherry MX Blue</li><li>Cherry MX Brown</li><li>Gateron Red</li><li>NovelKeys Cream</li><li>Topre</li><li>IBM Model M</li><li>Zoom65</li><li>Logitech G915 TKL</li><li>Deep Thock</li>
+        <li class="mouse">Logitech G Pro X Superlight</li><li class="mouse">Razer DeathAdder V2 Pro</li><li class="mouse">Glorious Model O</li><li class="mouse">Logitech G502 X</li>
+      </ul>
+    </div>
+    <img class="shot" src="img/app-sounds.webp" width="1232" height="548" loading="lazy" alt="ZeroClick's Keyboard page: a grid of sound packs with Holy Panda equipped, a volume slider and filters for Thock, Linear, Tactile and Clicky.">
+  </div>
+</section>
+
+<section id="overlay">
+  <div class="wrap split flip">
+    <div>
+      <img src="img/overlay.webp" width="621" height="419" loading="lazy" alt="The ZeroClick overlay: a dark 3D keyboard showing Esc, number keys, WASD rows and Space, next to a mouse.">
+      <div class="ways">
+        <figure><img src="img/overlay-retro.webp" width="621" height="419" loading="lazy" alt="Overlay in the Retro keycap set: beige keys with a red Esc."><figcaption>Retro, SA profile</figcaption></figure>
+        <figure><img src="img/overlay-arctic.webp" width="621" height="419" loading="lazy" alt="Overlay in the Arctic keycap set: white keys with a blue Esc."><figcaption>Arctic, XDA profile</figcaption></figure>
+        <figure><img src="img/overlay.webp" width="621" height="419" loading="lazy" alt="Overlay in the Midnight keycap set."><figcaption>Midnight, Cherry profile</figcaption></figure>
+      </div>
+    </div>
+    <div class="copy">
+      <h2>Show your keys on screen while you play.</h2>
+      <p>A 3D keyboard and mouse that sit on top of your game and light up the instant you press. It works with sounds off, too.</p>
+      <ul class="feats">
+        <li><b>Pick your keycaps.</b> Eight colourways and four keycap shapes, or your own colours.</li>
+        <li><b>Click to choose keys.</b> WASD, a gaming half, the full board, or exactly the keys you click.</li>
+        <li><b>Put the mouse anywhere.</b> Move and size the keyboard and mouse separately.</li>
+        <li><b>Only where you want it.</b> Show it over Fortnite only, everywhere, or follow your sound rules. Ctrl + Alt + O hides it mid-game.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="stream">
+  <div class="wrap split">
+    <div class="copy">
+      <h2>Put it on your stream.</h2>
+      <p>Streamer mode hands OBS the exact same overlay, with a transparent background. It can be on stream without being on your own screen.</p>
+      <ol class="steps">
+        <li><span><b>Turn on Streamer mode</b>On ZeroClick's Overlay page.</span></li>
+        <li><span><b>Copy a link</b>Keyboard and mouse, keyboard only, or mouse only, like <span class="url">http://127.0.0.1:47800/all</span></span></li>
+        <li><span><b>Add it to OBS</b>Sources, then +, then Browser. Paste the link and set the size ZeroClick shows you.</span></li>
+      </ol>
+    </div>
+    <img class="shot" src="img/app-stream.webp" width="934" height="338" loading="lazy" alt="ZeroClick's Streamer mode card: OBS is connected, with copyable links for keyboard and mouse, keyboard only, and mouse only, each with its size.">
+  </div>
+</section>
+
+<section id="fast">
+  <div class="wrap">
+    <h2>Built to be fast.</h2>
+    <div class="fast">
+      <div><h3>Native, not a web page</h3><p>Most sound apps run inside a hidden browser. ZeroClick is a small native Windows app that talks straight to Windows' low-latency audio engine.</p></div>
+      <div><h3>Sound in milliseconds</h3><p>Every sound is loaded into memory and trimmed of the silence many packs have baked in. On a typical PC a key press reaches the mixer in about 5 ms, and ZeroClick shows you its measured number.</p></div>
+      <div><h3>Never touches your game</h3><p>It reads your keyboard and mouse the way any Windows app can, and draws its overlay in its own window. Nothing is injected into the game.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <h2>Questions</h2>
+    <div class="faq">
+      <details>
+        <summary>Windows says "Windows protected your PC". Is that normal?</summary>
+        <p>Yes. ZeroClick isn't signed with a paid certificate yet, so Windows SmartScreen doesn't recognise it. Click <b>More info</b>, then <b>Run anyway</b>.</p>
+      </details>
+      <details>
+        <summary>Is it safe with Fortnite's anti-cheat?</summary>
+        <p>ZeroClick doesn't touch the game at all: it never injects anything or reads game memory. It listens to your keyboard and mouse like any other Windows app and plays sound from its own process.</p>
+      </details>
+      <details>
+        <summary>Does the overlay work in fullscreen?</summary>
+        <p>It works in Windowed Fullscreen and Borderless. Nothing can draw over exclusive Fullscreen without hooking into the game, so ZeroClick can switch Fortnite to Windowed Fullscreen for you in one click. On Windows 10 and 11 it usually plays just as smoothly.</p>
+      </details>
+      <details>
+        <summary>Can I use my own sounds?</summary>
+        <p>Yes. Drop a Mechvibes pack (a folder or .zip) onto ZeroClick, or record your own keyboard and drop the recording in. ZeroClick splits it into separate clicks for you.</p>
+      </details>
+      <details>
+        <summary>How does it update?</summary>
+        <p>ZeroClick checks for new versions on its own and shows a small popup. Click Update and it restarts on the new version.</p>
+      </details>
+      <details>
+        <summary>How do I uninstall it?</summary>
+        <p>Open Windows Settings, go to Apps, find ZeroClick in the list and choose Uninstall. You can choose to keep your settings in case you come back.</p>
+      </details>
+      <details>
+        <summary>Does it cost anything?</summary>
+        <p>No. ZeroClick is free.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <h2>Make every key sound the way you want.</h2>
+    <a class="btn" href="https://github.com/vzc1/ZeroClick/releases/latest/download/ZeroClickSetup.exe">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-5-5m5 5 5-5M5 20h14"/></svg>
+      Download for Windows
+    </a>
+    <p class="fine">Free. Windows 10 and 11. Version <span class="ver">2.5.0</span>.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Made by vzc1. <a href="https://github.com/vzc1/ZeroClick">ZeroClick on GitHub</a>.</p>
+    <p>Sounds on this page: Holy Panda recorded for kbsim by Thomas Lai (MIT), Cherry MX Blue from Mechvibes by Hai Nguyen (MIT), IBM Model M sampled by Ico Doornekamp for bucklespring (GPL-2.0). Every pack's credit and license is listed in the app.</p>
+  </div>
+</footer>
+
+<script>
+// ---- playable keyboard (ANSI 60%) ----
+// [label, width in key units, KeyboardEvent.code, style]
+const ROWS = [
+  [["`",1,"Backquote"],["1",1,"Digit1"],["2",1,"Digit2"],["3",1,"Digit3"],["4",1,"Digit4"],["5",1,"Digit5"],["6",1,"Digit6"],["7",1,"Digit7"],["8",1,"Digit8"],["9",1,"Digit9"],["0",1,"Digit0"],["-",1,"Minus"],["=",1,"Equal"],["Bksp",2,"Backspace","mod"]],
+  [["Tab",1.5,"Tab","mod"],["Q",1,"KeyQ"],["W",1,"KeyW"],["E",1,"KeyE"],["R",1,"KeyR"],["T",1,"KeyT"],["Y",1,"KeyY"],["U",1,"KeyU"],["I",1,"KeyI"],["O",1,"KeyO"],["P",1,"KeyP"],["[",1,"BracketLeft"],["]",1,"BracketRight"],["\\",1.5,"Backslash"]],
+  [["Caps",1.75,"CapsLock","mod"],["A",1,"KeyA"],["S",1,"KeyS"],["D",1,"KeyD"],["F",1,"KeyF"],["G",1,"KeyG"],["H",1,"KeyH"],["J",1,"KeyJ"],["K",1,"KeyK"],["L",1,"KeyL"],[";",1,"Semicolon"],["'",1,"Quote"],["Enter",2.25,"Enter","acc"]],
+  [["Shift",2.25,"ShiftLeft","mod"],["Z",1,"KeyZ"],["X",1,"KeyX"],["C",1,"KeyC"],["V",1,"KeyV"],["B",1,"KeyB"],["N",1,"KeyN"],["M",1,"KeyM"],[",",1,"Comma"],[".",1,"Period"],["/",1,"Slash"],["Shift",2.75,"ShiftRight","mod"]],
+  [["Ctrl",1.25,"ControlLeft","mod"],["Win",1.25,"MetaLeft","mod"],["Alt",1.25,"AltLeft","mod"],["",6.25,"Space"],["Alt",1.25,"AltRight","mod"],["Win",1.25,"MetaRight","mod"],["Menu",1.25,"ContextMenu","mod"],["Ctrl",1.25,"ControlRight","mod"]],
+];
+const rows = document.getElementById("rows");
+const byCode = {};
+for (const row of ROWS) for (const [label, w, code, style] of row) {
+  const k = document.createElement("div");
+  k.className = "key" + (style ? " " + style : "");
+  k.style.gridColumn = "span " + Math.round(w * 4);
+  k.textContent = label;
+  k.dataset.code = code;
+  rows.appendChild(k);
+  byCode[code] = k;
+}
+
+// ---- real sounds via Web Audio ----
+let ctx = null, pack = "panda";
+const cache = {};
+const NAMES = ["k0", "k1", "k2", "k3", "space", "enter"];
+function audio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+function load(p) {
+  if (cache[p]) return cache[p];
+  const a = audio();
+  cache[p] = Promise.all(NAMES.map(n => fetch(`sounds/${p}/${n}.mp3`).then(r => r.arrayBuffer()).then(b => a.decodeAudioData(b))))
+    .then(list => Object.fromEntries(NAMES.map((n, i) => [n, list[i]])));
+  return cache[p];
+}
+async function click(code) {
+  const a = audio();
+  const set = await load(pack);
+  const name = code === "Space" ? "space" : code === "Enter" ? "enter" : NAMES[Math.floor(Math.random() * 4)];
+  const src = a.createBufferSource();
+  src.buffer = set[name];
+  src.detune.value = (Math.random() - 0.5) * 60; // a little variation, like the app
+  const g = a.createGain();
+  g.gain.value = 0.9;
+  src.connect(g).connect(a.destination);
+  src.start();
+}
+function press(code) {
+  const k = byCode[code];
+  if (k) k.classList.add("down");
+  click(code);
+}
+function release(code) {
+  const k = byCode[code];
+  if (k) k.classList.remove("down");
+}
+
+const held = new Set();
+const SWALLOW = new Set(["Space", "Quote", "Slash", "Backspace", "Backquote"]); // Tab stays free for keyboard navigation
+addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey) return;          // leave browser shortcuts alone
+  if (e.target.closest && e.target.closest("button, a, summary") && (e.code === "Space" || e.code === "Enter")) return;
+  if (SWALLOW.has(e.code)) e.preventDefault();  // no page scroll / quick find while playing
+  if (held.has(e.code)) return;                 // one press = one sound, like a real board
+  held.add(e.code);
+  press(e.code);
+});
+addEventListener("keyup", e => { held.delete(e.code); release(e.code); });
+addEventListener("blur", () => { for (const c of held) release(c); held.clear(); });
+
+rows.addEventListener("pointerdown", e => {
+  const k = e.target.closest(".key");
+  if (!k) return;
+  e.preventDefault();
+  press(k.dataset.code);
+  const up = () => { release(k.dataset.code); removeEventListener("pointerup", up); removeEventListener("pointercancel", up); };
+  addEventListener("pointerup", up);
+  addEventListener("pointercancel", up);
+});
+
+for (const b of document.querySelectorAll(".packs button")) {
+  b.addEventListener("click", () => {
+    pack = b.dataset.pack;
+    for (const o of document.querySelectorAll(".packs button")) o.setAttribute("aria-pressed", String(o === b));
+    load(pack).then(() => click("KeyA"));
+  });
+}
+
+// show the newest version number
+fetch("https://api.github.com/repos/vzc1/ZeroClick/releases/latest").then(r => r.ok ? r.json() : null).then(j => {
+  if (j && j.tag_name) for (const v of document.querySelectorAll(".ver")) v.textContent = j.tag_name.replace(/^v/, "");
+}).catch(() => {});
+</script>
+</body>
+</html>
